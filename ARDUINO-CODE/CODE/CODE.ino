@@ -50,6 +50,11 @@ String port1_Name="PORT 1";
 String port2_Name="PORT 2";
 String port3_Name="PORT 3";
 String port4_Name="PORT 4";
+
+float humidity=0;
+float temp=0;
+int   t_soil=0;
+
 void setup() {
   //Serial.begin(Baud);
   pinMode(LED,OUTPUT);
@@ -72,11 +77,11 @@ void setup() {
   digitalWrite(LED,LOW);
   
 }
-String temp="";
+
 void loop() {
     if (millis() - previousMillis > t) {
      previousMillis = millis();
-     sendDHT11info();
+     send2Server();
   }
   
 
@@ -125,21 +130,35 @@ bool checkPort(byte port){
   if(digitalRead(port)) return true;
   return false;
   }
- 
 
-void sendDHT11info() {
-  float h = dht.readHumidity();    //Đọc độ ẩm
-  float t = dht.readTemperature(); //Đọc nhiệt độ
-  if (isnan(h) || isnan(t)) {
+void getDHT11() {
+  humidity = dht.readHumidity();    //Đọc độ ẩm
+  temp = dht.readTemperature(); //Đọc nhiệt độ
+  if (isnan(humidity) || isnan(temp)) {
      //Serial.println("Failed to read from DHT sensor!");
      return;
   }
-  // Tạo chuỗi Json để gửi lên Server
-  StaticJsonBuffer<200> jsonBuffer2;
-  JsonObject& root2 = jsonBuffer2.createObject();
-  root2["t"] = t;
-  root2["h"] = h;
-  root2.printTo(Serial);
-  Serial.println();
+}
+void getSoilSensor(bool debug=false){
+  int value = analogRead(A0);     // Ta sẽ đọc giá trị hiệu điện thế của cảm biến
+  t_soil = map(value, 0, 1023, 0, 100);
+  
+  if (debug){
+  Serial.print(t_soil);
+  Serial.println('%');  
+  }
 }
 
+
+void send2Server(){
+  getSoilSensor(false);
+  getDHT11();  
+  
+  StaticJsonBuffer<200> jsonBuffer2;
+  JsonObject& root2 = jsonBuffer2.createObject();
+  root2["t"]        = temp;
+  root2["h"]        = humidity;
+  root2["soil"]     = t_soil;  
+  root2.printTo(Serial);
+  Serial.println();  
+  }
